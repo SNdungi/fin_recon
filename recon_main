@@ -1,0 +1,49 @@
+Sub recon_short()
+Dim i As Long, tills As Long
+'set the reference range
+tills = Sheet1.Range("B" & Rows.count).End(xlUp).Row
+'set the loop from the first customer to the last
+For i = 2 To tills
+Dim ssum As Double, target As Double, r As Range, c As Long, lr As Long, rFiltered As Range, rf As Range
+
+'clear notes
+Sheet1.Range("i2:i" & tills + 1).ClearContents
+
+'set the total expectesd aggregate
+target = Sheet1.Range("F" & i)
+
+If target = 0 Then GoTo Fin
+
+ssum = 0
+'set the client zone/TMS range
+    Sheet7.Select
+    On Error Resume Next
+    Set rFiltered = ActiveSheet.AutoFilter.Range
+    If Err.Number <> 0 Then
+       Set rFiltered = Sheet7.Range("A1").CurrentRegion
+    End If
+    On Error GoTo 0
+    Set rf = rFiltered.Columns(11).Offset(1).Resize(rFiltered.Rows.count - 1).SpecialCells(xlCellTypeVisible)
+    lr = rf.End(xlDown).Row
+    
+    For c = lr To 2 Step -1
+    'check transaction id/sequence nos are greater than the last one from previou day ,check if the customer name is as col.B in TIlls, check txn type 1
+      If Int(Sheet7.Cells(c, "B")) > Sheet1.Range("D" & i).Value And Sheet7.Range("D" & c) = Sheet1.Range("B" & i).Value And Sheet7.Range("G" & c) = 1 Then
+      'aggregate the amount in client zone as long as the total is not more that the targeted amount
+           ssum = ssum + Sheet7.Cells(c, "R").Value
+           Sheet7.Cells(c, "R").Interior.Color = RGB(146, 208, 80)
+           If ssum >= target Then Exit For
+      End If
+    Next c
+    Sheet7.Cells(c, "AF") = ssum
+    Sheet1.Cells(i, 7) = ssum
+    If ssum < target Then
+    Sheet1.Cells(i, 9) = "TMS value less than GL, check missing entries"
+    Else
+    Sheet1.Cells(i, 5) = Sheet1.Cells(i, 4)
+    Sheet1.Cells(i, 4) = Int(Sheet7.Cells(c, "B"))
+    End If
+
+Fin:
+Next i
+End Sub
